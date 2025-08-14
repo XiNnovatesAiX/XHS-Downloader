@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         XHS-Downloader
 // @namespace    https://github.com/JoeanAmier/XHS-Downloader
-// @version      2.1.0
+// @version      2.1.14
 // @description  提取小红书作品/用户链接，下载小红书无水印图文/视频作品文件
 // @author       JoeanAmier
 // @match        http*://xhslink.com/*
@@ -34,6 +34,8 @@
         autoScrollSwitch: GM_getValue("autoScrollSwitch", false),
         maxScrollCount: GM_getValue("maxScrollCount", 50),
         keepMenuVisible: GM_getValue("keepMenuVisible", false),
+        linkCheckboxSwitch: GM_getValue("linkCheckboxSwitch", true),
+        imageCheckboxSwitch: GM_getValue("imageCheckboxSwitch", true),
         fileNameFormat: undefined,
         imageFileFormat: undefined,
         icon: {
@@ -45,17 +47,17 @@
             },
         }, // 位置配置
         position: {
-            bottom: '8rem', left: '2rem'
+            bottom: '6rem', left: '1rem'
         }, // 动画配置
         animation: {
-            duration: 0.35, // 动画时长(s)
+            duration: 0.25, // 动画时长(s)
             easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
         }
     };
 
-    const readme = () => {
+    const readme = async () => {
         const instructions = `
-XHS-Downloader 用户脚本 功能清单：
+功能清单：
 1. 下载小红书无水印作品文件
 2. 提取推荐页面作品链接
 3. 提取账号发布作品链接
@@ -65,7 +67,7 @@ XHS-Downloader 用户脚本 功能清单：
 7. 提取搜索结果作品链接
 8. 提取搜索结果用户链接
 
-XHS-Downloader 用户脚本 详细说明：
+注意事项：
 1. 下载小红书无水印作品文件时，脚本需要花费时间处理文件，请等待片刻，请勿多次点击下载按钮
 2. 无水印作品文件较大，可能需要较长的时间处理，页面跳转可能会导致下载失败
 3. 提取账号发布、收藏、点赞、专辑作品链接时，脚本可以自动滚动页面直至加载全部作品
@@ -77,30 +79,35 @@ XHS-Downloader 用户脚本 详细说明：
 项目开源地址：https://github.com/JoeanAmier/XHS-Downloader
 `
         const disclaimer_content = `
-关于 XHS-Downloader 的 免责声明：
-
 1. 使用者对本项目的使用由使用者自行决定，并自行承担风险。作者对使用者使用本项目所产生的任何损失、责任、或风险概不负责。
-2. 本项目的作者提供的代码和功能是基于现有知识和技术的开发成果。作者尽力确保代码的正确性和安全性，但不保证代码完全没有错误或缺陷。
-3. 使用者在使用本项目时必须严格遵守 GNU General Public License v3.0 的要求，并在适当的地方注明使用了 GNU General Public License v3.0 的代码。
-4. 使用者在任何情况下均不得将本项目的作者、贡献者或其他相关方与使用者的使用行为联系起来，或要求其对使用者使用本项目所产生的任何损失或损害负责。
+2. 本项目的作者提供的代码和功能是基于现有知识和技术的开发成果。作者按现有技术水平努力确保代码的正确性和安全性，但不保证代码完全没有错误或缺陷。
+3. 本项目依赖的所有第三方库、插件或服务各自遵循其原始开源或商业许可，使用者需自行查阅并遵守相应协议，作者不对第三方组件的稳定性、安全性及合规性承担任何责任。
+4. 使用者在使用本项目时必须严格遵守 GNU General Public License v3.0 的要求，并在适当的地方注明使用了 GNU General Public License v3.0 的代码。
 5. 使用者在使用本项目的代码和功能时，必须自行研究相关法律法规，并确保其使用行为合法合规。任何因违反法律法规而导致的法律责任和风险，均由使用者自行承担。
-6. 本项目的作者不会提供 XHS-Downloader 项目的付费版本，也不会提供与 XHS-Downloader 项目相关的任何商业服务。
-7. 基于本项目进行的任何二次开发、修改或编译的程序与原创作者无关，原创作者不承担与二次开发行为或其结果相关的任何责任，使用者应自行对因二次开发可能带来的各种情况负全部责任。
+6. 使用者不得使用本工具从事任何侵犯知识产权的行为，包括但不限于未经授权下载、传播受版权保护的内容，开发者不参与、不支持、不认可任何非法内容的获取或分发。
+7. 本项目不对使用者涉及的数据收集、存储、传输等处理活动的合规性承担责任。使用者应自行遵守相关法律法规，确保处理行为合法正当；因违规操作导致的法律责任由使用者自行承担。
+8. 使用者在任何情况下均不得将本项目的作者、贡献者或其他相关方与使用者的使用行为联系起来，或要求其对使用者使用本项目所产生的任何损失或损害负责。
+9. 本项目的作者不会提供 XHS-Downloader 项目的付费版本，也不会提供与 XHS-Downloader 项目相关的任何商业服务。
+10. 基于本项目进行的任何二次开发、修改或编译的程序与原创作者无关，原创作者不承担与二次开发行为或其结果相关的任何责任，使用者应自行对因二次开发可能带来的各种情况负全部责任。
+11. 本项目不授予使用者任何专利许可；若使用本项目导致专利纠纷或侵权，使用者自行承担全部风险和责任。未经作者或权利人书面授权，不得使用本项目进行任何商业宣传、推广或再授权。
+12. 作者保留随时终止向任何违反本声明的使用者提供服务的权利，并可能要求其销毁已获取的代码及衍生作品。
+13. 作者保留在不另行通知的情况下更新本声明的权利，使用者持续使用即视为接受修订后的条款。
 
 在使用本项目的代码和功能之前，请您认真考虑并接受以上免责声明。如果您对上述声明有任何疑问或不同意，请不要使用本项目的代码和功能。如果您使用了本项目的代码和功能，则视为您已完全理解并接受上述免责声明，并自愿承担使用本项目的一切风险和后果。
-
-是否已阅读 XHS-Downloader 功能说明与免责声明(YES/NO)
 `
-        alert(instructions);
+
+        await showTextModal({
+            title: 'XHS-Downloader 脚本说明', text: instructions, mode: 'info',           // info: 仅关闭
+            closeText: '关闭'
+        });
         if (!config.disclaimer) {
-            const answer = prompt(disclaimer_content, "");
-            if (!answer) {
-                GM_setValue("disclaimer", false);
-                config.disclaimer = false;
-            } else {
-                GM_setValue("disclaimer", answer.toUpperCase() === "YES" || answer.toUpperCase() === "Y");
-                config.disclaimer = GM_getValue("disclaimer");
-            }
+            showTextModal({
+                title: 'XHS-Downloader 免责声明', text: disclaimer_content, mode: 'confirm',        // confirm: 确认+关闭
+                confirmText: '我已知晓', closeText: '关闭'
+            }).then(answer => {
+                GM_setValue("disclaimer", answer);
+                config.disclaimer = answer;
+            });
         }
     };
 
@@ -139,6 +146,16 @@ XHS-Downloader 用户脚本 详细说明：
         }
     };
 
+    const updateLinkCheckboxSwitch = (value) => {
+        config.linkCheckboxSwitch = value;
+        GM_setValue("linkCheckboxSwitch", config.linkCheckboxSwitch);
+    }
+
+    const updateImageCheckboxSwitch = (value) => {
+        config.imageCheckboxSwitch = value;
+        GM_setValue("imageCheckboxSwitch", config.imageCheckboxSwitch);
+    }
+
     const updateFileNameFormat = (value) => {
         config.fileNameFormat = value;
         GM_setValue("fileNameFormat", config.fileNameFormat);
@@ -149,8 +166,20 @@ XHS-Downloader 用户脚本 详细说明：
     }
 
     const abnormal = (text) => {
-        alert(`${text}请向作者反馈！\n项目开源地址：https://github.com/JoeanAmier/XHS-Downloader`);
+        showTextModal({
+            title: '发生异常',
+            text: `${text}请向作者反馈！\n项目开源地址：https://github.com/JoeanAmier/XHS-Downloader`,
+            mode: 'info',           // info: 仅关闭
+            closeText: '关闭'
+        });
     };
+
+    const runTips = (text) => {
+        showTextModal({
+            title: '脚本提示', text: text, mode: 'info',           // info: 仅关闭
+            closeText: '关闭'
+        });
+    }
 
     const generateVideoUrl = note => {
         try {
@@ -208,15 +237,17 @@ XHS-Downloader 用户脚本 详细说明：
         const name = extractName();
         console.info(`文件名称 ${name}`);
         if (note.type === "video") {
+            showToast("正在下载文件，请稍等...");
             await downloadVideo(urls[0], name);
         } else {
             let items = extractImageWebpUrls(note, urls);
             if (items.length === 0) {
                 console.error("解析图文作品数据失败", note)
                 abnormal("解析图文作品数据发生异常！")
-            } else if (urls.length > 1) {
+            } else if (urls.length > 1 && config.imageCheckboxSwitch) {
                 showImageSelectionModal(items, name,)
             } else {
+                showToast("正在下载文件，请稍等...");
                 await downloadImage(items, name);
             }
         }
@@ -370,7 +401,7 @@ XHS-Downloader 用户脚本 详细说明：
     const extractName = () => {
         let name = document.title.replace(/ - 小红书$/, "").replace(/[^\u4e00-\u9fa5a-zA-Z0-9 ~!@#$%&()_\-+=\[\];"',.！（）【】：“”，。《》？]/g, "");
         name = truncateString(name, 64,);
-        let match = currentUrl.match(/\/([^\/]+)$/);
+        let match = currentUrl.match(/\/([0-9a-z]+?)\?/);
         let id = match ? match[1] : null;
         return name === "" ? id : name
     };
@@ -468,7 +499,7 @@ XHS-Downloader 用户脚本 详细说明：
 
     const extractNotesInfo = order => {
         const notesRawValue = unsafeWindow.__INITIAL_STATE__.user.notes._rawValue[order];
-        return notesRawValue.map(item => [item.id, item.xsecToken,]);
+        return notesRawValue.filter(item => item?.noteCard).map(item => [item.id, item.xsecToken, item.noteCard.cover.urlDefault, item.noteCard.user.nickName, item.noteCard.displayTitle,]);
     };
 
     const extractBoardInfo = () => {
@@ -484,7 +515,7 @@ XHS-Downloader 用户脚本 详细说明：
             const id = match[1]; // match[0] 是整个匹配的字符串，match[1] 是第一个括号内的匹配
 
             const notesRawValue = unsafeWindow.__INITIAL_STATE__.board.boardFeedsMap._rawValue[id].notes;
-            return notesRawValue.map(item => [item.noteId, item.xsecToken,]);
+            return notesRawValue.map(item => [item.noteId, item.xsecToken, item.cover.urlDefault, item.user.nickName, item.displayTitle,]);
         } else {
             console.error("从链接提取专辑 ID 失败", currentUrl,);
             return [];
@@ -493,12 +524,12 @@ XHS-Downloader 用户脚本 详细说明：
 
     const extractFeedInfo = () => {
         const notesRawValue = unsafeWindow.__INITIAL_STATE__.feed.feeds._rawValue;
-        return notesRawValue.map(item => [item.id, item.xsecToken,]);
+        return notesRawValue.filter(item => item?.noteCard).map(item => [item.id, item.xsecToken, item.noteCard.cover.urlDefault, item.noteCard.user.nickName, item.noteCard.displayTitle,]);
     };
 
     const extractSearchNotes = () => {
         const notesRawValue = unsafeWindow.__INITIAL_STATE__.search.feeds._rawValue;
-        return notesRawValue.map(item => [item.id, item.xsecToken,]);
+        return notesRawValue.filter(item => item?.noteCard).map(item => [item.id, item.xsecToken, item.noteCard.cover.urlDefault, item.noteCard.user.nickName, item.noteCard.displayTitle,]);
     }
 
     const extractSearchUsers = () => {
@@ -510,11 +541,17 @@ XHS-Downloader 用户脚本 详细说明：
 
     const generateUserUrls = data => data.map(id => `https://www.xiaohongshu.com/user/profile/${id}`).join(" ");
 
+    const invalidDetection = data => data.every(([first]) => Boolean(first));
+
     const extractAllLinks = (callback, order) => {
         scrollScreenEvent(() => {
             let data;
             if (order >= 0 && order <= 2) {
                 data = extractNotesInfo(order);
+                if (!invalidDetection(data)) {
+                    runTips("提取作品链接失败！受平台限制，未登录状态下无法通过账号主页浏览作品详情！请登录后重试！");
+                    return;
+                }
             } else if (order === 3) {
                 data = extractSearchNotes();
             } else if (order === 4) {
@@ -524,10 +561,29 @@ XHS-Downloader 用户脚本 详细说明：
             } else if (order === 5) {
                 data = extractBoardInfo()
             } else {
-                data = [];
+                data = []
             }
-            let urlsString = order !== 4 ? generateNoteUrls(data) : generateUserUrls(data);
-            callback(urlsString);
+            if (data.length === 0) {
+                callback("");
+                return;
+            }
+            let urlsString;
+            if (order === 4) {
+                urlsString = generateUserUrls(data);
+                callback(urlsString);
+            } else if (config.linkCheckboxSwitch) {
+                showListSelectionModal(data.map(([id, token, cover, author, title,]) => ({
+                    id: id, token: token, image: cover, author: author, title: title,
+                })),).then((selected) => {
+                    if (selected.length > 0) {
+                        urlsString = generateNoteUrls(selected.map(item => [item.id, item.token]));
+                        callback(urlsString);
+                    }
+                });
+            } else {
+                urlsString = generateNoteUrls(data.map(item => item.slice(0, 2)))
+                callback(urlsString);
+            }
         }, [0, 1, 2, 5].includes(order))
     };
 
@@ -535,225 +591,290 @@ XHS-Downloader 用户脚本 详细说明：
         extractAllLinks(urlsString => {
             if (urlsString) {
                 GM_setClipboard(urlsString, "text", () => {
-                    alert('作品/用户链接已复制到剪贴板！');
+                    showToast('作品/用户链接已复制到剪贴板！');
                 });
             } else {
-                alert("未提取到任何作品/用户链接！")
+                showToast("未提取到任何作品/用户链接！")
             }
         }, order);
     };
 
     if (typeof JSZip === 'undefined') {
-        alert("XHS-Downloader 用户脚本依赖库 JSZip 加载失败，作品文件打包下载功能无法使用，请尝试刷新网页或者向作者反馈！");
+        runTips("XHS-Downloader 用户脚本依赖库 JSZip 加载失败，作品文件打包下载功能无法使用，请尝试刷新网页或者向作者反馈！");
     }
 
-    /* ==================== 样式定义 ==================== */
     let style = document.createElement('style');
     style.textContent = `
-        /* 弹窗基础样式 */
-        #SettingsOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.32);
-            backdrop-filter: blur(4px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            animation: fadeIn 0.3s;
-        }
+    /* 通用 Overlay（三个弹窗共用） */
+    #SettingsOverlay,
+    #imageSelectionOverlay,
+    #textGenericOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.32);
+        backdrop-filter: blur(4px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s;
+    }
 
-        .optimized-scroll-modal {
-            background: white;
-            border-radius: 16px;
-            width: 380px; /* 缩小窗口宽度 */
-            max-width: 95vw;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-            overflow: hidden;
-            animation: scaleUp 0.3s;
-        }
+    /* Settings 容器，仅本块特有尺寸 */
+    .optimized-scroll-modal {
+        background: white;
+        border-radius: 16px;
+        width: 380px; /* 缩小窗口宽度 */
+        max-width: 95vw;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+        overflow: hidden;
+        animation: scaleUp 0.3s;
+    }
 
-        /* 头部样式 */
-        .modal-header {
-            padding: 1rem;
-            border-bottom: 1px solid #eee;
-            text-align: center;
-        }
+    /* 通用头部/内容/底部/按钮（三个弹窗共用） */
+    .modal-header {
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+        text-align: center;
+    }
+    .modal-header span {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: #212121;
+    }
+    .modal-body {
+        flex: 1;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+    .modal-footer {
+        padding: 1rem;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+    .primary-btn {
+        background: #2196F3;
+        color: white;
+        padding: 8px 24px;
+        border-radius: 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .secondary-btn {
+        background: #f0f0f0;
+        color: #666;
+        padding: 8px 24px;
+        border-radius: 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
 
-        .modal-header span {
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: #212121;
-        }
+    /* Settings 专用的设置项样式（保持不变） */
+    .setting-item {
+        margin: 0.5rem 0;
+        padding: 10px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+    .setting-item:hover { background: #f0f0f0; }
+    .setting-item label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    .setting-item label span {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #333;
+    }
 
-        /* 内容区域 */
-        .modal-body {
-            padding: 1rem; /* 减小内边距 */
-        }
+    .toggle-switch {
+        position: relative;
+        width: 40px;
+        height: 20px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: #ccc;
+        transition: 0.4s;
+        border-radius: 34px;
+    }
+    .slider:before {
+        content: "";
+        position: absolute;
+        height: 16px; width: 16px;
+        left: 2px; bottom: 2px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.4s;
+    }
+    input:checked + .slider { background: #2196F3; }
+    input:checked + .slider:before { transform: translateX(20px); }
 
-        /* 设置项样式 */
-        .setting-item {
-            margin: 0.5rem 0; /* 减少设置项间距 */
-            padding: 10px;
-            border-radius: 8px;
-            transition: background 0.2s;
-        }
+    .number-input {
+        display: flex;
+        align-items: center;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 6px 0;
+    }
+    .number-input input {
+        width: 60px;
+        text-align: center;
+        border: none;
+    }
+    .number-button {
+        padding: 4px 8px;
+        background: #f0f0f0;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .text-input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        margin-top: 8px;
+        transition: border-color 0.2s;
+    }
+    .text-input:focus {
+        outline: none;
+        border-color: #2196F3;
+        box-shadow: 0 0 4px rgba(33, 150, 243, 0.3);
+    }
+    .setting-description {
+        font-size: 0.875rem;
+        color: #757575;
+        margin-top: 4px;
+        line-height: 1.4;
+        text-align: left;
+    }
 
-        .setting-item:hover {
-            background: #f0f0f0;
-        }
-
-        .setting-item label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-
-        /* 设置项标题 */
-        .setting-item label span {
-            font-size: 1rem; /* 增大标题文字 */
-            font-weight: 500;
-            color: #333;
-        }
-
-        /* 开关样式 */
-        .toggle-switch {
-            position: relative;
-            width: 40px;
-            height: 20px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #ccc;
-            transition: 0.4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            content: "";
-            position: absolute;
-            height: 16px;
-            width: 16px;
-            left: 2px;
-            bottom: 2px;
-            background: white;
-            border-radius: 50%;
-            transition: 0.4s;
-        }
-
-        input:checked + .slider {
-            background: #2196F3;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(20px);
-        }
-
-        /* 数值输入 */
-        .number-input {
-            display: flex;
-            align-items: center;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-            margin: 6px 0;
-        }
-
-        .number-input input {
-            width: 60px;
-            text-align: center;
-            border: none;
-        }
-
-        .number-button {
-            padding: 4px 8px;
-            background: #f0f0f0;
-            border: none;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        /* 文本输入框 */
-        .text-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            margin-top: 8px; /* 增加与标题的距离 */
-            transition: border-color 0.2s;
-        }
-
-        .text-input:focus {
-            outline: none;
-            border-color: #2196F3;
-            box-shadow: 0 0 4px rgba(33, 150, 243, 0.3);
-        }
-
-        /* 设置项说明 */
-        .setting-description {
-            font-size: 0.875rem;
-            color: #757575;
-            margin-top: 4px;
-            line-height: 1.4;
-            text-align: left; /* 左对齐 */
-        }
-
-        /* 底部按钮 */
-        .modal-footer {
-            padding: 1rem;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        .primary-btn {
-            background: #2196F3;
-            color: white;
-            padding: 8px 24px;
-            border-radius: 24px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .secondary-btn {
-            background: #f0f0f0;
-            color: #666;
-            padding: 8px 24px;
-            border-radius: 24px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        /* 动画 */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes scaleUp {
-            from { transform: scale(0.98); }
-            to { transform: scale(1); }
-        }
+    /* 通用动画：统一定义一次 */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleUp { from { transform: scale(0.98); } to { transform: scale(1); } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
     `;
     document.head.appendChild(style);
+
+    // 覆盖修改：文本弹窗样式
+    (() => {
+        if (!document.getElementById('textModalStyle')) {
+            const style = document.createElement('style');
+            style.id = 'textModalStyle';
+            style.textContent = `
+            /* 仅文本弹窗容器特有的尺寸与外观 */
+            .text-generic-modal {
+                background: #fff;
+                border-radius: 16px;
+                width: 80%;
+                max-width: 700px;
+                max-height: 80vh;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+                overflow: hidden;
+                animation: scaleUp 0.3s;
+                display: flex;
+                flex-direction: column;
+            }
+            /* 仅该弹窗使用的文本内容样式 */
+            .text-content {
+                white-space: pre-wrap;
+                word-break: break-word;
+                color: #1e272e;
+                line-height: 1.6;
+                font-size: 0.95rem;
+                user-select: text;
+            }
+            `;
+            document.head.appendChild(style);
+        }
+    })();
+
+    /**
+     * 显示文本弹窗（手动调用）
+     * @param {Object} opts
+     * @param {string} opts.title    标题
+     * @param {string} opts.text     文本内容
+     * @param {'confirm'|'info'} opts.mode 模式：confirm=确认+关闭；info=仅关闭
+     * @param {string} [opts.confirmText='确认'] 确认按钮文案（仅 confirm 模式生效）
+     * @param {string} [opts.closeText='关闭']   关闭按钮文案
+     * @returns {Promise<boolean>} confirm 返回 true；关闭/点遮罩返回 false
+     */
+    function showTextModal(opts) {
+        const {
+            title = '提示', text = '', mode = 'info', confirmText = '确认', closeText = '关闭',
+        } = opts || {};
+
+        if (document.getElementById('textGenericOverlay')) {
+            return Promise.resolve(false);
+        }
+
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.id = 'textGenericOverlay';
+
+            const modal = document.createElement('div');
+            modal.className = 'text-generic-modal';
+
+            const header = document.createElement('div');
+            header.className = 'modal-header';
+            header.innerHTML = `<span>${title}</span>`;
+
+            const body = document.createElement('div');
+            body.className = 'modal-body';
+            const content = document.createElement('div');
+            content.className = 'text-content';
+            content.textContent = text ?? '';
+            body.appendChild(content);
+
+            const footer = document.createElement('div');
+            footer.className = 'modal-footer';
+
+            if (mode === 'confirm') {
+                const okBtn = document.createElement('button');
+                okBtn.className = 'primary-btn';
+                okBtn.textContent = confirmText;
+                okBtn.addEventListener('click', () => close(true));
+                footer.appendChild(okBtn);
+            }
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'secondary-btn';
+            closeBtn.textContent = closeText;
+            closeBtn.addEventListener('click', () => close(false));
+            footer.appendChild(closeBtn);
+
+            modal.appendChild(header);
+            modal.appendChild(body);
+            modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            function close(result) {
+                overlay.style.animation = 'fadeOut 0.2s';
+                setTimeout(() => {
+                    overlay.remove();
+                    resolve(result);
+                }, 200);
+            }
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close(false);
+            });
+        });
+    }
 
     // 创建开关项
     const createSettingItem = ({label, description, checked}) => {
@@ -892,6 +1013,18 @@ XHS-Downloader 用户脚本 详细说明：
             disabled: !GM_getValue("autoScrollSwitch", false),
         });
 
+        const linkCheckboxSwitch = createSettingItem({
+            label: '链接提取选择模式',
+            description: '关闭后，提取作品链接时无需确认直接提取全部链接',
+            checked: GM_getValue("linkCheckboxSwitch", true),
+        });
+
+        const imageCheckboxSwitch = createSettingItem({
+            label: '图片下载选择模式',
+            description: '关闭后，下载图文作品时无需确认直接下载全部文件',
+            checked: GM_getValue("imageCheckboxSwitch", true),
+        });
+
         const keepMenuVisible = createSettingItem({
             label: '菜单保持显示',
             description: '启用后，功能菜单无需鼠标悬停始终保持显示',
@@ -916,6 +1049,8 @@ XHS-Downloader 用户脚本 详细说明：
         body.appendChild(filePack);
         body.appendChild(autoScroll);
         body.appendChild(scrollCount);
+        body.appendChild(linkCheckboxSwitch);
+        body.appendChild(imageCheckboxSwitch);
         body.appendChild(keepMenuVisible);
         // body.appendChild(nameFormat);
 
@@ -943,6 +1078,8 @@ XHS-Downloader 用户脚本 详细说明：
             updateAutoScrollSwitch(autoScroll.querySelector('input').checked);
             updatePackageDownloadFiles(filePack.querySelector('input').checked);
             updateKeepMenuVisible(keepMenuVisible.querySelector('input').checked);
+            updateLinkCheckboxSwitch(linkCheckboxSwitch.querySelector('input').checked);
+            updateImageCheckboxSwitch(imageCheckboxSwitch.querySelector('input').checked);
             updateMaxScrollCount(parseInt(scrollCount.querySelector('input').value) || 50)
             // updateFileNameFormat(nameFormat.querySelector('.text-input').value.trim() || null);
             closeSettingsModal();
@@ -956,155 +1093,80 @@ XHS-Downloader 用户脚本 详细说明：
     /* ==================== 样式定义 ==================== */
     style = document.createElement('style');
     style.textContent = `
-        /* 弹窗基础样式 */
-        #imageSelectionOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.32);
-            backdrop-filter: blur(4px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            animation: fadeIn 0.3s;
-        }
+    /* 图片选择弹窗：仅容器尺寸与自身网格等特有样式 */
+    .image-selection-modal {
+        background: white;
+        border-radius: 16px;
+        width: 80%;
+        max-width: 900px;
+        max-height: 90vh;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+        overflow: hidden;
+        animation: scaleUp 0.3s;
+        display: flex;
+        flex-direction: column;
+    }
 
-        .image-selection-modal {
-            background: white;
-            border-radius: 16px;
-            width: 80%;
-            max-width: 900px;
-            max-height: 90vh;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-            overflow: hidden;
-            animation: scaleUp 0.3s;
-            display: flex;
-            flex-direction: column;
-        }
+    /* 图片网格等仅此弹窗拥有的样式 */
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+    }
+    .image-item {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+        aspect-ratio: 3 / 4;
+        background:
+            conic-gradient(#eee 25%, transparent 0 50%, #eee 0 75%, transparent 0)
+            0 0/16px 16px #fafafa;
+    }
+    .image-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
+        border-radius: 6px;
+        display: block;
+    }
+    .image-item.selected { border-color: #2196F3; }
 
-        /* 头部样式 */
-        .modal-header {
-            padding: 1rem;
-            border-bottom: 1px solid #eee;
-            text-align: center;
-        }
-
-        .modal-header span {
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: #212121;
-        }
-
-        /* 内容区域 */
-        .modal-body {
-            flex: 1;
-            padding: 1rem;
-            overflow-y: auto;
-        }
-
-        /* 图片网格 */
-        .image-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 12px;
-        }
-
-        .image-item {
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        }
-
-        .image-item img {
-            width: 100%;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 6px;
-        }
-
-        .image-item.selected {
-            border-color: #2196F3;
-        }
-
-        .image-checkbox {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 20px;
-            height: 20px;
-            opacity: 0;
-        }
-
-        .image-checkbox + label {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 20px;
-            height: 20px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.2s;
-        }
-
-        .image-checkbox:checked + label {
-            background: #2196F3;
-            border-color: #2196F3;
-        }
-
-        .image-checkbox:checked + label::after {
-            content: "✓";
-            color: white;
-            font-size: 12px;
-        }
-
-        /* 底部按钮 */
-        .modal-footer {
-            padding: 1rem;
-            border-top: 1px solid #eee;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        .primary-btn {
-            background: #2196F3;
-            color: white;
-            padding: 8px 24px;
-            border-radius: 24px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .secondary-btn {
-            background: #f0f0f0;
-            color: #666;
-            padding: 8px 24px;
-            border-radius: 24px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        /* 动画 */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes scaleUp {
-            from { transform: scale(0.98); }
-            to { transform: scale(1); }
-        }
+    .image-checkbox {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        opacity: 0;
+    }
+    .image-checkbox + label {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 20px;
+        height: 20px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.2s;
+    }
+    .image-checkbox:checked + label {
+        background: #2196F3;
+        border-color: #2196F3;
+    }
+    .image-checkbox:checked + label::after {
+        content: "✓";
+        color: white;
+        font-size: 12px;
+    }
     `;
     document.head.appendChild(style);
 
@@ -1186,12 +1248,25 @@ XHS-Downloader 用户脚本 详细说明：
         // 创建底部按钮
         const footer = document.createElement('div');
         footer.className = 'modal-footer';
+        // 新增：全选 / 全不选
+        const selectAllBtn = document.createElement('button');
+        selectAllBtn.className = 'secondary-btn';
+        selectAllBtn.textContent = '全选';
+
+        const selectNoneBtn = document.createElement('button');
+        selectNoneBtn.className = 'secondary-btn';
+        selectNoneBtn.textContent = '全不选';
+
         const confirmBtn = document.createElement('button');
         confirmBtn.className = 'primary-btn';
         confirmBtn.textContent = '开始下载';
+
         const closeBtn = document.createElement('button');
         closeBtn.className = 'secondary-btn';
         closeBtn.textContent = '关闭窗口';
+
+        footer.appendChild(selectAllBtn);
+        footer.appendChild(selectNoneBtn);
         footer.appendChild(confirmBtn);
         footer.appendChild(closeBtn);
 
@@ -1211,17 +1286,292 @@ XHS-Downloader 用户脚本 详细说明：
                 }
             });
             if (selectedImages.length === 0) {
-                alert('请至少选择一张图片！');
+                showToast('请至少选择一张图片！');
                 return;
             }
             closeImagesModal();
+            showToast("正在下载文件，请稍等...");
             await downloadImage(selectedImages, name)
         });
 
         // 关闭事件
         closeBtn.addEventListener('click', closeImagesModal);
         overlay.addEventListener('click', (e) => e.target === overlay && closeImagesModal());
+
+        const setAllChecked = (checked) => {
+            const items = imageGrid.querySelectorAll('.image-item');
+            items.forEach((item) => {
+                const box = item.querySelector('.image-checkbox');
+                if (!box || box.disabled) return;
+                box.checked = checked;
+                item.classList.toggle('selected', checked);
+            });
+        };
+
+        // 全选 / 全不选
+        selectAllBtn.addEventListener('click', () => setAllChecked(true));
+        selectNoneBtn.addEventListener('click', () => setAllChecked(false));
     };
+
+    (() => {
+        if (!document.getElementById('listSelectionStyle')) {
+            const style = document.createElement('style');
+            style.id = 'listSelectionStyle';
+            style.textContent = `
+            /* 列表弹窗容器，仅定义差异尺寸，其他沿用通用 modal 样式 */
+            .list-selection-modal {
+                background: #fff;
+                border-radius: 16px;
+                width: 80%;
+                max-width: 800px;
+                max-height: 80vh;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+                overflow: hidden;
+                animation: scaleUp 0.3s;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* 列表容器 */
+            .list-container {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            /* 列表项 */
+            .list-item {
+                display: grid;
+                grid-template-columns: 24px 64px 1fr; /* 复选框、缩略图、文本区 */
+                align-items: center;
+                gap: 12px;
+                padding: 10px;
+                border: 1px solid #eee;
+                border-radius: 10px;
+                transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+                cursor: pointer;
+            }
+            .list-item:hover {
+                background: #fafafa;
+                border-color: #e6e6e6;
+            }
+            .list-item.selected {
+                border-color: #2196F3;
+                box-shadow: 0 0 0 4px rgba(33,150,243,0.12) inset;
+            }
+
+            /* 复选框样式（使用原生复选框以保证可访问性与简单性） */
+            .list-checkbox {
+                width: 18px;
+                height: 18px;
+                margin: 0 0 0 2px;
+                cursor: pointer;
+            }
+
+            /* 缩略图 */
+            .list-thumb {
+                width: 64px;
+                height: 64px;
+                object-fit: cover;
+                border-radius: 8px;
+                user-select: none;
+                pointer-events: none; /* 点击行切换选择，避免图片拦截点击 */
+                background: #f2f2f2;
+            }
+
+            /* 文本区 */
+            .list-texts {
+                display: flex;
+                flex-direction: column;
+                min-width: 0; /* 允许文本正确换行截断 */
+            }
+            .list-author {
+                font-size: 0.95rem;
+                color: #212121;
+                font-weight: 500;
+                line-height: 1.4;
+                word-break: break-word;
+            }
+            .list-title {
+                margin-top: 4px;
+                font-size: 0.85rem;
+                color: #757575;
+                line-height: 1.4;
+                word-break: break-word;
+            }
+        `;
+            document.head.appendChild(style);
+        }
+    })();
+
+    /**
+     * 显示列表选择弹窗
+     * @param {Array<{id:any, image:string, author:string, title:string}>} list
+     * @param {Object} [options]
+     * @param {string} [options.title='请选择'] 弹窗标题
+     * @param {string} [options.confirmText='确认'] 确认按钮文本
+     * @param {string} [options.cancelText='取消'] 取消按钮文本
+     * @param {boolean} [options.prechecked=true] 是否默认勾选全部
+     * @returns {Promise<Array|null>} 点击确认返回选中项数组；取消/关闭返回 null
+     */
+    function showListSelectionModal(list, options = {}) {
+        const {
+            title = '请选择需要提取的项目', confirmText = '提取链接', cancelText = '放弃', prechecked = true,
+        } = options;
+
+        if (document.getElementById('listSelectionOverlay')) return Promise.resolve(null);
+
+        return new Promise((resolve) => {
+            // 覆盖层
+            const overlay = document.createElement('div');
+            overlay.id = 'listSelectionOverlay';
+            overlay.style.cssText = `
+            position: fixed; inset: 0; background: rgba(0,0,0,0.32);
+            backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center;
+            z-index: 10000; animation: fadeIn 0.3s;
+        `;
+
+            // 弹窗
+            const modal = document.createElement('div');
+            modal.className = 'list-selection-modal';
+
+            // 头部
+            const header = document.createElement('div');
+            header.className = 'modal-header';
+            header.innerHTML = `<span>${title}</span>`;
+
+            // 内容
+            const body = document.createElement('div');
+            body.className = 'modal-body';
+
+            const container = document.createElement('div');
+            container.className = 'list-container';
+
+            // id -> item 映射
+            const map = new Map();
+            list.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'list-item';
+                row.dataset.key = item.id;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'list-checkbox';
+                checkbox.checked = prechecked;
+
+                const img = document.createElement('img');
+                img.className = 'list-thumb';
+                img.src = item.image || '';
+                img.alt = 'thumb';
+
+                const texts = document.createElement('div');
+                texts.className = 'list-texts';
+                const author = document.createElement('div');
+                author.className = 'list-author';
+                author.textContent = item.author ?? '';
+                const title = document.createElement('div');
+                title.className = 'list-title';
+                title.textContent = item.title ?? '';
+                texts.appendChild(author);
+                texts.appendChild(title);
+
+                row.appendChild(checkbox);
+                row.appendChild(img);
+                row.appendChild(texts);
+
+                if (checkbox.checked) row.classList.add('selected');
+
+                row.addEventListener('click', (e) => {
+                    if ((e.target instanceof HTMLElement) && e.target.classList.contains('list-checkbox')) return;
+                    checkbox.checked = !checkbox.checked;
+                    row.classList.toggle('selected', checkbox.checked);
+                });
+
+                checkbox.addEventListener('change', () => {
+                    row.classList.toggle('selected', checkbox.checked);
+                });
+
+                map.set(row.dataset.key, item);
+                container.appendChild(row);
+            });
+
+            body.appendChild(container);
+
+            // 底部按钮
+            const footer = document.createElement('div');
+            footer.className = 'modal-footer';
+
+            // 新增：全选 / 全不选
+            const selectAllBtn = document.createElement('button');
+            selectAllBtn.className = 'secondary-btn';
+            selectAllBtn.textContent = '全选';
+
+            const selectNoneBtn = document.createElement('button');
+            selectNoneBtn.className = 'secondary-btn';
+            selectNoneBtn.textContent = '全不选';
+
+            // 右侧操作：确认 / 取消
+            const confirmBtn = document.createElement('button');
+            confirmBtn.className = 'primary-btn';
+            confirmBtn.textContent = confirmText;
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'secondary-btn';
+            cancelBtn.textContent = cancelText;
+
+            // 将按钮加入 footer（顺序：全选、全不选、确认、取消）
+            footer.appendChild(selectAllBtn);
+            footer.appendChild(selectNoneBtn);
+            footer.appendChild(confirmBtn);
+            footer.appendChild(cancelBtn);
+
+            // 组装
+            modal.appendChild(header);
+            modal.appendChild(body);
+            modal.appendChild(footer);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // 辅助：批量设置选择状态
+            const setAllChecked = (checked) => {
+                container.querySelectorAll('.list-item').forEach((row) => {
+                    const box = row.querySelector('.list-checkbox');
+                    if (box) {
+                        box.checked = checked;
+                        row.classList.toggle('selected', checked);
+                    }
+                });
+            };
+
+            // 关闭
+            const close = (result) => {
+                overlay.style.animation = 'fadeOut 0.2s';
+                setTimeout(() => {
+                    overlay.remove();
+                    resolve(result);
+                }, 200);
+            };
+
+            // 事件绑定
+            selectAllBtn.addEventListener('click', () => setAllChecked(true));
+            selectNoneBtn.addEventListener('click', () => setAllChecked(false));
+            cancelBtn.addEventListener('click', () => close(null));
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) close(null);
+            });
+            confirmBtn.addEventListener('click', () => {
+                const selected = [];
+                container.querySelectorAll('.list-item').forEach((row) => {
+                    const checkbox = row.querySelector('.list-checkbox');
+                    if (checkbox && checkbox.checked) {
+                        const key = row.dataset.key;
+                        if (map.has(key)) selected.push(map.get(key));
+                    }
+                });
+                close(selected);
+            });
+        });
+    }
 
     // 创建主图标
     const createIcon = () => {
@@ -1401,6 +1751,53 @@ XHS-Downloader 用户脚本 详细说明：
         }
     `;
     document.head.appendChild(style);
+
+    // 创建并显示一个自动消失的消息弹窗（Toast）
+    function showToast(message, duration = 5000) {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+
+        // 基础样式（可按需调整）
+        Object.assign(toast.style, {
+            position: 'fixed',
+            left: '50%',
+            bottom: '10rem',
+            transform: 'translateX(-50%)',
+            maxWidth: '80vw',
+            padding: '10px 16px',
+            background: 'rgba(128, 128, 128, 0.6)',
+            color: '#fff',
+            fontSize: '16px',
+            lineHeight: '1.4',
+            borderRadius: '8px',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.25)',
+            zIndex: '99999',
+            opacity: '0',
+            transition: 'opacity 200ms ease',
+            pointerEvents: 'none',
+            whiteSpace: 'pre-wrap',
+            textAlign: 'center',
+        });
+
+        document.body.appendChild(toast);
+
+        // 触发淡入
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+        });
+
+        // 指定时间后淡出并移除
+        const hide = () => {
+            toast.style.opacity = '0';
+            const remove = () => {
+                toast.removeEventListener('transitionend', remove);
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            };
+            toast.addEventListener('transitionend', remove);
+        };
+
+        setTimeout(hide, duration);
+    }
 
     // 涟漪效果
     const createRipple = e => {
