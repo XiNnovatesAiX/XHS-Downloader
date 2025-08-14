@@ -6,3 +6,22 @@ __pycache__/
 /.run/
 /Volume/
 !/.github/
+
+# Personal URLs and data (PRIVACY)
+bulk_urls.txt
+failed_urls.txt
+demo_urls.txt
+*_urls.txt
+
+# Analysis output files (may contain personal data)
+content_analysis.json
+detailed_post_connections.json
+posts_metadata.json
+
+# Database files (contain downloaded content)
+*.db
+*.sqlite
+*.sqlite3
+
+# Personal settings
+settings.json

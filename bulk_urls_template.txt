@@ -1,0 +1,5 @@
+# XiaoHongShu URLs Template for Bulk Download
+# Copy this file to bulk_urls.txt and add your actual URLs
+
+/user/profile/61536bcd0000000002024c0c/6711a1bf0000000024015111?xsec_token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&xsec_source=pc_user
+/user/profile/61536bcd0000000002024c0c/66f37e05000000001902cf56?xsec_token=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=&xsec_source=pc_user
